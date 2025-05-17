@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/io/github/bigsaltyfishes/molyuubar/icons">
+    <file compressed="true" preprocess="xml-stripblanks">more_horiz_24.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">power_settings_24.svg</file>
+  </gresource>
+</gresources>

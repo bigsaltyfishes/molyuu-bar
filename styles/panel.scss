@@ -1,0 +1,29 @@
+@use "colors/base16";
+@use "component";
+@use "functions/math";
+
+.panel {
+    background-color: base16.$base00;
+    border-radius: math.to-rem(15px);
+    padding: math.to-rem(8px) math.to-rem(16px);
+    margin: math.to-rem(1px) math.to-rem(10px) 0 0;
+
+    .power-button {
+        @include component.button;
+
+        .popup {
+            @include component.popup;
+        }
+    }
+
+    .datetime {
+        @include component.component;
+
+        .time {
+            color: base16.$base07;
+            font-size: math.to-rem(15px);
+            padding-left: math.to-rem(8px);
+            padding-right: math.to-rem(8px);
+        }
+    }
+}

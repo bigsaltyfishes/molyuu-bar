@@ -1,0 +1,20 @@
+@use "colors/base16";
+@use "functions/math";
+
+.current-window {
+    background-color: base16.$base00;
+    border-radius: math.to-rem(15px);
+    padding: math.to-rem(8px) math.to-rem(16px);
+    margin: math.to-rem(1px) 0 0 math.to-rem(10px);
+
+    .app-id {
+        color: base16.$base0C;
+        font-size: math.to-rem(13px);
+    }
+
+    .app-title {
+        color: base16.$base07;
+        font-size: math.to-rem(15px);
+        font-weight: 600;
+    }
+}

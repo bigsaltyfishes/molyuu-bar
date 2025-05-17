@@ -1,0 +1,36 @@
+@use "colors/base16";
+@use "functions/math";
+@use "functions/reset";
+
+@mixin component {
+    background-color: math.gtkalpha(base16.$base01, 0.6);
+    border-radius: math.to-rem(50px);
+    padding: math.to-rem(8px) math.to-rem(8px);
+    margin: 0 math.to-rem(4px) 0 0;
+}
+
+@mixin button {
+    @include reset.unset_default_button_style;
+    @include component;
+    transition: all 200ms ease;
+    border: none;
+    color: base16.$base04;
+
+    &:hover {
+        background-color: math.gtkalpha(base16.$base02, 0.8);
+    }
+
+    icon {
+        font-size: math.to-rem(16px);
+        color: inherit;
+    }
+
+    label {
+        color: inherit;
+        font-size: math.to-rem(14px);
+    }
+}
+
+@mixin popup {
+    transition: all 200ms ease-in-out
+}

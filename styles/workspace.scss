@@ -1,0 +1,39 @@
+@use "functions/reset.scss";
+@use "colors/base16";
+@use "component";
+@use "functions/math";
+
+.workspace-container {
+    background-color: base16.$base00;
+    border-radius: math.to-rem(15px);
+    padding: math.to-rem(8px) math.to-rem(16px);
+    margin: math.to-rem(1px) 0 0 math.to-rem(10px);
+    transition-property: width;
+    transition-duration: 300ms;
+    transition-timing-function: linear;
+
+    .workspace {
+        @include component.component;
+
+        .workspace-button {
+            @include reset.unset_default_button_style;
+            min-width: math.to-rem(20px);
+            min-height: math.to-rem(10px);
+            padding: 0;
+            border-radius: math.to-rem(50px);
+            transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+            background-color: math.gtkalpha(base16.$base0C, 0.2);
+
+            &:hover {
+                background-color: math.gtkalpha(base16.$base0C, 0.8);
+                -gtk-icon-transform: scale(1.2);
+            }
+
+            &.active {
+                background-color: base16.$base0C;
+                box-shadow: 0 0 math.to-rem(4px) math.gtkalpha(base16.$base0C, 0.4);
+                -gtk-icon-transform: scale(1.3);
+            }
+        }
+    }
+}
