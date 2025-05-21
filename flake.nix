@@ -14,13 +14,15 @@
         with pkgs;
         {
           devShells.default = mkShell {
+            LIBCLANG_PATH="${llvmPackages.libclang.lib}/lib";
             buildInputs = [
               dart-sass
               pkg-config
               gtk4
               gtk4-layer-shell
-              /* libadwaita */
+              libadwaita
               librsvg
+              clang
               niri
               foot
             ];

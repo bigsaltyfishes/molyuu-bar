@@ -1,8 +1,9 @@
-use gtk4::{Application, ApplicationWindow};
-use gtk4::{CenterBox, prelude::*};
+use adw::prelude::AdwApplicationWindowExt;
+use adw::{Application, ApplicationWindow, prelude::*};
+use gtk4::CenterBox;
 use gtk4_layer_shell::{Edge, Layer, LayerShell};
 
-use crate::ipc::event::{EventHandler, EventListener};
+use crate::service::event::{EventHandler, EventListener};
 use crate::widgets::current_window::CurrentWindow;
 use crate::widgets::panel::Panel;
 use crate::widgets::workspace::Workspace;
@@ -32,10 +33,10 @@ impl Taskbar {
         let panel = Panel::new();
         workspace.register_to_listener(service);
         current_window.register_to_listener(service);
+        container.set_valign(gtk4::Align::Start);
         container.set_start_widget(Some(workspace.export_widget()));
         container.set_center_widget(Some(current_window.export_widget()));
         container.set_end_widget(Some(panel.export_widget()));
-
         smol::spawn(gtk4::glib::spawn_future_local(async move {
             workspace.listen().await;
         }))
@@ -45,8 +46,15 @@ impl Taskbar {
         }))
         .detach();
 
+        let container_clone = container.clone();
         window.set_css_classes(&["taskbar"]);
-        window.set_child(Some(&container));
+        window.set_content(Some(&container));
+        window.connect_map(move |window| {
+            window.set_size_request(
+                container_clone.width(),
+                container_clone.height(),
+            );
+        });
 
         Taskbar { window, container }
     }

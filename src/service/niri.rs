@@ -206,7 +206,6 @@ impl NiriService {
             }
             let event: niri_ipc::Event =
                 serde_json::from_str(&buffer).expect("Failed to parse event");
-            println!("Received event: {:?}", event);
             match event {
                 Event::WorkspacesChanged { workspaces } => {
                     self.workspaces.update_all(workspaces);
@@ -317,7 +316,6 @@ impl NiriService {
     }
 
     pub async fn send_command(command: Request) -> Result<Response, Box<dyn Error + Send + Sync>> {
-        println!("Sending command: {:?}", command);
         let niri_socket = std::env::var("NIRI_SOCKET")?;
         let mut stream = UnixStream::connect(niri_socket).await?;
         let command_str = serde_json::to_string(&command).expect("Failed to serialize command");

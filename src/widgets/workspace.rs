@@ -2,16 +2,14 @@ use std::time::Duration;
 
 use gtk4::{
     Box, Button, Revealer, RevealerTransitionType,
-    glib::{closure_local, object::ObjectExt},
-    prelude::{BoxExt, ButtonExt, WidgetExt, WidgetExtManual},
-    subclass::box_,
+    prelude::{BoxExt, ButtonExt, WidgetExt},
 };
 use smol::{
     Timer,
     channel::{Receiver, Sender},
 };
 
-use crate::ipc::{
+use crate::service::{
     event::{EventHandler, EventListener, UIUpdateEvent, UIUpdateEventType},
     niri::NiriService,
 };
@@ -40,14 +38,6 @@ impl Workspace {
             .child(&outer_container)
             .build();
 
-        revealer.connect_closure(
-            "show",
-            false,
-            closure_local!(move |revealer: Revealer| {
-                revealer.set_reveal_child(true);
-            }),
-        );
-
         Workspace {
             revealer,
             container: workspace,
@@ -75,7 +65,6 @@ impl Workspace {
         self.revealer.set_reveal_child(false);
         Timer::after(Duration::from_millis(300)).await;
         self.container.append(&button);
-        println!("Width: {}", self.outer_container.width());
         self.revealer.set_reveal_child(true);
         self.buttons.push(button);
     }

@@ -1,9 +1,10 @@
 mod power;
 mod datetime;
+mod network;
 
 use gtk4::{
     Box,
-    prelude::{BoxExt, ButtonExt, PopoverExt, WidgetExt},
+    prelude::{BoxExt, WidgetExt},
 };
 use power::Power;
 

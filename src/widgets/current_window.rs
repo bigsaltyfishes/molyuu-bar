@@ -1,9 +1,7 @@
 use std::time::Duration;
 
-use glib::{closure_local, object::ObjectExt};
 use gtk4::{
     Box, Label, Revealer,
-    builders::BoxBuilder,
     prelude::{BoxExt, WidgetExt},
 };
 use smol::{
@@ -11,48 +9,48 @@ use smol::{
     channel::{Receiver, Sender},
 };
 
-use crate::ipc::event::{EventHandler, EventListener, UIUpdateEvent, UIUpdateEventType};
+use crate::service::event::{EventHandler, EventListener, UIUpdateEvent, UIUpdateEventType};
 
 pub struct CurrentWindow {
     app_id: Label,
     app_title: Label,
     channel: (Sender<UIUpdateEvent>, Receiver<UIUpdateEvent>),
     box_revealer: Revealer,
-    container: Box,
 }
 
 impl CurrentWindow {
     pub fn new() -> Self {
-        let container = Box::new(gtk4::Orientation::Vertical, 0);
-        container.add_css_class("current-window");
-        container.set_halign(gtk4::Align::Start);
         let app_id = Label::new(Some("Niri"));
         let app_title = Label::new(Some(""));
+        let container = Box::new(gtk4::Orientation::Vertical, 0);
+        let outer_container = Box::new(gtk4::Orientation::Horizontal, 0);
+
         app_id.add_css_class("app-id");
+        container.add_css_class("current-window");
         app_title.add_css_class("app-title");
+
         app_id.set_halign(gtk4::Align::Start);
         app_title.set_halign(gtk4::Align::Start);
+
         container.append(&app_id);
         container.append(&app_title);
+        container.set_halign(gtk4::Align::Start);
+        container.set_valign(gtk4::Align::Center);
+
+        outer_container.append(&container);
+
         let box_revealer = Revealer::builder()
             .transition_type(gtk4::RevealerTransitionType::Crossfade)
             .transition_duration(300)
             .reveal_child(false)
-            .child(&container)
+            .child(&outer_container)
             .build();
-        box_revealer.connect_closure(
-            "show",
-            false,
-            closure_local!(move |revealer: Revealer| {
-                revealer.set_reveal_child(true);
-            }),
-        );
+
         Self {
             app_id,
             app_title,
             channel: smol::channel::unbounded(),
             box_revealer,
-            container,
         }
     }
 

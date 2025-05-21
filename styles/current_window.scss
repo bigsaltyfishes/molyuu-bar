@@ -3,18 +3,22 @@
 
 .current-window {
     background-color: base16.$base00;
-    border-radius: math.to-rem(15px);
+    border-radius: math.to-rem(40px);
     padding: math.to-rem(8px) math.to-rem(16px);
     margin: math.to-rem(1px) 0 0 math.to-rem(10px);
 
     .app-id {
         color: base16.$base0C;
         font-size: math.to-rem(13px);
+        padding-left: math.to-rem(8px);
+        padding-right: math.to-rem(8px);
     }
 
     .app-title {
         color: base16.$base07;
         font-size: math.to-rem(15px);
         font-weight: 600;
+        padding-left: math.to-rem(8px);
+        padding-right: math.to-rem(8px);
     }
 }
