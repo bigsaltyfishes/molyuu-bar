@@ -17,6 +17,7 @@ use super::{
 pub type HwAddress = String;
 
 #[derive(Debug)]
+/// Represents the settings for a wireless network connection.
 pub struct WirelessConnectionSettings<'a> {
     pub id: Value<'a>,
     pub type_: Value<'a>,
@@ -33,6 +34,8 @@ pub struct WirelessConnectionSettings<'a> {
 }
 
 impl<'a> WirelessConnectionSettings<'a> {
+    /// Converts the wireless connection settings into a HashMap suitable for D-Bus communication.
+    /// This method returns a map of references to the original values.
     pub fn map_ref(&'a self) -> HashMap<&'a str, HashMap<&'a str, &'a Value<'a>>> {
         let mut settings = HashMap::new();
         let mut connection = HashMap::new();
@@ -65,6 +68,8 @@ impl<'a> WirelessConnectionSettings<'a> {
         settings
     }
 
+    /// Converts the wireless connection settings into a HashMap suitable for D-Bus communication.
+    /// This method consumes the settings and returns a map of owned values.
     pub fn into_map(self) -> HashMap<&'a str, HashMap<&'a str, Value<'a>>> {
         let mut settings = HashMap::new();
         let mut connection = HashMap::new();
@@ -99,6 +104,7 @@ impl<'a> WirelessConnectionSettings<'a> {
 }
 
 #[derive(Debug, Default)]
+/// Builder for creating `WirelessConnectionSettings`.
 pub struct WirelessConnectionSettingsBuilder<'a> {
     id: Option<String>,
     ssid: Option<String>,
@@ -109,35 +115,46 @@ pub struct WirelessConnectionSettingsBuilder<'a> {
 }
 
 impl<'a> WirelessConnectionSettingsBuilder<'a> {
+    /// Creates a new `WirelessConnectionSettingsBuilder`.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Sets the ID for the wireless connection.
     pub fn id(mut self, id: String) -> Self {
         self.id = Some(id);
         self
     }
 
+    /// Sets the SSID for the wireless connection.
     pub fn ssid(mut self, ssid: String) -> Self {
         self.ssid = Some(ssid);
         self
     }
 
+    /// Sets the BSSID for the wireless connection.
     pub fn bssid(mut self, bssid: String) -> Self {
         self.bssid = Some(bssid);
         self
     }
 
+    /// Sets the key management type for the wireless connection.
     pub fn key_mgmt(mut self, key_mgmt: String) -> Self {
         self.key_mgmt = Some(key_mgmt);
         self
     }
 
+    /// Sets the pre-shared key (PSK) for the wireless connection.
     pub fn psk(mut self, psk: String) -> Self {
         self.psk = Some(psk);
         self
     }
 
+    /// Builds the `WirelessConnectionSettings` from the builder.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `bssid` or `ssid` are not set.
     pub fn build(self) -> WirelessConnectionSettings<'a> {
         let bssid = self.bssid.unwrap();
         let ssid = self.ssid.unwrap();
@@ -163,6 +180,7 @@ impl<'a> WirelessConnectionSettingsBuilder<'a> {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+/// Represents the security type of a wireless access point.
 pub enum AccessPointSecurity {
     None,
     WPA,
@@ -171,9 +189,10 @@ pub enum AccessPointSecurity {
 }
 
 impl AccessPointSecurity {
-    /// Converts the security flags to an AccessPointSecurity enum.
-    /// Returns None if the flags do not match any known security type or is not supported.
-    /// Currently, only WPA3 and WPA/WPA2 Personal are supported.
+    /// Converts security flags (u32) to an `AccessPointSecurity` enum.
+    ///
+    /// It prioritizes WPA3, then WPA/WPA2 Personal, then None.
+    /// If the flags do not match any known or supported security type, it returns `Unsupported`.
     pub fn from_flags(flags: u32) -> Self {
         NM80211ApSecurityFlags::from_bits(flags)
             .map_or(None, |security| {
@@ -197,6 +216,9 @@ impl AccessPointSecurity {
 
 impl TryInto<String> for AccessPointSecurity {
     type Error = ();
+    /// Tries to convert `AccessPointSecurity` into a string representation suitable for NetworkManager.
+    ///
+    /// Returns `Err(())` if the security type is `Unsupported`.
     fn try_into(self) -> Result<String, Self::Error> {
         match self {
             AccessPointSecurity::None => Ok("none".to_string()),
@@ -208,11 +230,13 @@ impl TryInto<String> for AccessPointSecurity {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+/// Errors that can occur when trying to connect to an access point.
 pub(super) enum AccessPointConnectError {
     AuthentiationRequired,
 }
 
 #[derive(Clone, Debug)]
+/// Represents a wireless access point.
 pub struct AccessPoint {
     pub ssid: String,
     pub flags: u32,
@@ -227,6 +251,10 @@ pub struct AccessPoint {
 }
 
 impl AccessPoint {
+    /// Tries to create an `AccessPoint` from a D-Bus object path.
+    ///
+    /// Fetches access point details from D-Bus.
+    /// Returns `None` if the path is invalid or fetching details fails.
     pub async fn try_from_path(path: String) -> Option<Self> {
         let path = ObjectPath::try_from(path.clone()).ok()?;
         let access_point = AccessPointProxy::new_from_path(path.clone().into(), &DBUS_CONNECTION)
@@ -258,14 +286,18 @@ impl AccessPoint {
         })
     }
 
+    /// Checks if the access point has a hidden SSID.
     pub fn is_hidden(&self) -> bool {
         self.ssid.is_empty()
     }
 
+    /// Checks if the access point requires authentication.
     pub fn authentication_required(&self) -> bool {
-        self.flags & 0x1 != 0
+        self.key_management() != AccessPointSecurity::None
     }
 
+    /// Determines the key management security type of the access point.
+    /// It checks RSN flags first, then WPA flags.
     pub fn key_management(&self) -> AccessPointSecurity {
         let mut ret = AccessPointSecurity::from_flags(self.rsn_flags);
         if ret == AccessPointSecurity::Unsupported {
@@ -276,6 +308,7 @@ impl AccessPoint {
 }
 
 impl NetworkService {
+    /// Requests a scan for wireless networks on the specified device.
     pub(super) async fn request_scan(device_path: OwnedObjectPath) {
         let wireless = WirelessProxy::new_from_path(device_path.clone(), &DBUS_CONNECTION)
             .await
@@ -286,6 +319,10 @@ impl NetworkService {
             .expect(format!("Failed to request scan for device: {}", device_path).as_str());
     }
 
+    /// Synchronizes known wireless network connections with NetworkManager.
+    ///
+    /// It lists existing connections, filters for wireless ones, and sends an event
+    /// to update the internal state. It also listens for connection changes from NetworkManager.
     pub(super) async fn sync_connections(sender: Sender<NetworkServiceInterEvent>) {
         let settings_proxy = SettingsProxy::new(&DBUS_CONNECTION)
             .await
@@ -345,6 +382,22 @@ impl NetworkService {
         }
     }
 
+    /// Attempts to connect to the specified access point.
+    ///
+    /// Handles both connecting to known profiles and adding new ones.
+    /// If authentication is required and a PSK is provided, it will use it.
+    ///
+    /// # Arguments
+    ///
+    /// * `inter_sender` - Sender for internal service events.
+    /// * `ap` - The `AccessPoint` to connect to.
+    /// * `device_path` - The D-Bus path of the wireless device.
+    /// * `psk` - Optional pre-shared key for authentication.
+    ///
+    /// # Errors
+    ///
+    /// Returns `AccessPointConnectError::AuthentiationRequired` if authentication is needed but no PSK is provided
+    /// for a new connection or an existing connection that is not validated.
     pub(super) async fn request_connect(
         inter_sender: Sender<NetworkServiceInterEvent>,
         ap: AccessPoint,
@@ -469,6 +522,10 @@ impl NetworkService {
         Ok(())
     }
 
+    /// A watchdog function for a Wi-Fi device.
+    ///
+    /// Monitors device state changes, active access point changes, and access point list changes.
+    /// Sends events to the `NetworkService` to update its state accordingly.
     pub(super) async fn wifi_watch_dog(
         sender: Sender<NetworkServiceInterEvent>,
         device_path: OwnedObjectPath,

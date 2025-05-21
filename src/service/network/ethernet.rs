@@ -6,6 +6,10 @@ use zbus::zvariant::OwnedObjectPath;
 use super::{DBUS_CONNECTION, NetworkDeviceState, NetworkService, NetworkServiceInterEvent};
 
 impl NetworkService {
+    /// A watchdog function for a Ethernet device.
+    ///
+    /// Monitors device state changes.
+    /// Sends events to the `NetworkService` to update its state accordingly.
     pub(super) async fn ethernet_watch_dog(
         sender: Sender<NetworkServiceInterEvent>,
         device_path: OwnedObjectPath,
