@@ -1,14 +1,21 @@
+#[cfg(test)]
+mod tests;
+mod utils;
 mod service;
 mod widgets;
 mod windows;
 
-use std::thread;
+use std::time::Duration;
 
 use adw::Application;
 use gtk4::{gio, glib};
 use gtk4::prelude::*;
-use service::network::NetworkService;
+use service::event::EventListener;
+use service::network::endpoints::event::{NetworkServiceEvent, NetworkServiceEventType, NetworkServiceRequest, WiFiConnServiceMessage, WiFiConnServiceRequest, WiFiConnServiceResponse};
+use service::network::wireless::ap::AccessPointSecurity;
+use service::network::{self, NetworkService};
 use service::niri::NiriService;
+use smol::Timer;
 
 const APP_ID: &str = "io.github.bigsaltyfishes.molyuubar";
 
@@ -34,16 +41,15 @@ fn main() -> glib::ExitCode {
     });
     app.connect_activate(|app| {
         let mut service = NiriService::new();
+        let mut network_service = NetworkService::new();
         let taskbar = windows::bar::Taskbar::new(app, &mut service);
-        thread::spawn(move || {
-            let mut network_service = NetworkService::new();
-            smol::spawn(async move {
-                network_service.listen().await;
-            }).detach();
-            smol::block_on(service.listen());
-        });
+        smol::spawn(async move {
+            network_service.listen().await;
+        }).detach();
+        smol::spawn(async move {
+            service.listen().await;
+        }).detach();
         taskbar.export_widget().present();
     });
-
     app.run()
 }

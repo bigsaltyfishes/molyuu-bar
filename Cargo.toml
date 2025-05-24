@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 adw = { version = "0.7.2", package = "libadwaita", features = ["v1_5"] }
+async-trait = "0.1.88"
 bimap = "0.6.3"
 chrono = "0.4.41"
 futures-lite = "2.6.0"

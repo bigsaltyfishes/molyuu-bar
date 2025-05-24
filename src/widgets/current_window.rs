@@ -59,8 +59,8 @@ impl CurrentWindow {
     }
 }
 
-impl EventHandler for CurrentWindow {
-    fn register_to_listener(&self, listener: &mut impl EventListener) {
+impl EventHandler<UIUpdateEventType, UIUpdateEvent> for CurrentWindow {
+    fn register_to_listener(&self, listener: &mut impl EventListener<UIUpdateEventType, UIUpdateEvent>) {
         listener.register_event_handler(
             UIUpdateEventType::WindowFocusChanged,
             self.channel.0.clone(),

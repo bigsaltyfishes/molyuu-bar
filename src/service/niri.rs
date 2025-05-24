@@ -343,7 +343,7 @@ impl NiriService {
     }
 }
 
-impl EventListener for NiriService {
+impl EventListener<UIUpdateEventType, UIUpdateEvent> for NiriService {
     fn register_event_handler(
         &mut self,
         event_type: UIUpdateEventType,

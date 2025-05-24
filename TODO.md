@@ -2,8 +2,9 @@
 
 - [ ] Service
   - [ ] Network
-    - [ ] Identify AP via SSID (For roaming), simply let Network Manager to select best profile.
-    - [ ] Identify ActiveConnection State change reason (e.g. authentication required)
+    - [x] Identify AP via SSID (For roaming), simply let Network Manager to select best profile.
+    - [x] Identify ActiveConnection State change reason (e.g. authentication required)
+    - [ ] Add support for multiple device with same SSID.
 
 ## Reference
 - [nm-settings-dbus

@@ -1,3 +1,5 @@
+use std::hash::{Hash, Hasher};
+
 use smol::channel::Sender;
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -20,15 +22,15 @@ pub enum UIUpdateEvent {
     WindowClosed,
 }
 
-pub trait EventListener: Send + Sync {
+pub trait EventListener<T: Hash, EVENT>: Send + Sync {
     fn register_event_handler(
         &mut self,
-        event_type: UIUpdateEventType,
-        sender: Sender<UIUpdateEvent>,
+        event_type: T,
+        sender: Sender<EVENT>,
     );
 }
 
-pub trait EventHandler {
-    fn register_to_listener(&self, listener: &mut impl EventListener);
+pub trait EventHandler<T: Hash, EVENT> {
+    fn register_to_listener(&self, listener: &mut impl EventListener<T, EVENT>);
     async fn listen(&mut self);
 }

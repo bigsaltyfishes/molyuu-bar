@@ -1,16 +1,18 @@
-use crate::service::network::{NetworkEvent, NetworkEventType};
 use rusty_network_manager::{DeviceProxy, dbus_interface_types::NMDeviceStateReason};
 use smol::{channel::Sender, stream::StreamExt};
 use zbus::zvariant::OwnedObjectPath;
 
-use super::{DBUS_CONNECTION, NetworkDeviceState, NetworkService, NetworkServiceInterEvent};
+use crate::service::network::endpoints::event::{NetworkDeviceState, NetworkServiceEvent, NetworkServiceEventType};
 
-impl NetworkService {
+use super::{endpoints::inter::NetworkServiceInterEvent, NetworkService, DBUS_CONNECTION};
+
+#[async_trait::async_trait]
+pub(in super::super) trait EthernetWatchDogExt {
     /// A watchdog function for a Ethernet device.
     ///
     /// Monitors device state changes.
     /// Sends events to the `NetworkService` to update its state accordingly.
-    pub(super) async fn ethernet_watch_dog(
+    async fn ethernet_watch_dog(
         sender: Sender<NetworkServiceInterEvent>,
         device_path: OwnedObjectPath,
     ) {
@@ -40,8 +42,8 @@ impl NetworkService {
 
             let ret = sender
                 .send(NetworkServiceInterEvent::SendMessage {
-                    event_type: NetworkEventType::DeviceStateChanged,
-                    event: NetworkEvent::DeviceStateChanged {
+                    event_type: NetworkServiceEventType::DeviceStateChanged,
+                    event: NetworkServiceEvent::DeviceStateChanged {
                         interface: device_interface.clone(),
                         state: state_enum,
                         reason: NMDeviceStateReason::try_from(reason)
@@ -73,8 +75,8 @@ impl NetworkService {
 
                     let ret = sender
                         .send(NetworkServiceInterEvent::SendMessage {
-                            event_type: NetworkEventType::DeviceStateChanged,
-                            event: NetworkEvent::DeviceStateChanged {
+                            event_type: NetworkServiceEventType::DeviceStateChanged,
+                            event: NetworkServiceEvent::DeviceStateChanged {
                                 interface: device_interface.clone(),
                                 state: state_enum,
                                 reason: NMDeviceStateReason::try_from(reason)
@@ -95,3 +97,5 @@ impl NetworkService {
         );
     }
 }
+
+impl EthernetWatchDogExt for NetworkService {}

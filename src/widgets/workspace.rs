@@ -84,8 +84,8 @@ impl Workspace {
     }
 }
 
-impl EventHandler for Workspace {
-    fn register_to_listener(&self, listener: &mut impl EventListener) {
+impl EventHandler<UIUpdateEventType, UIUpdateEvent> for Workspace {
+    fn register_to_listener(&self, listener: &mut impl EventListener<UIUpdateEventType, UIUpdateEvent>) {
         listener
             .register_event_handler(UIUpdateEventType::WorkspaceChanged, self.channel.0.clone());
     }

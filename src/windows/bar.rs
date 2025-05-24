@@ -3,7 +3,7 @@ use adw::{Application, ApplicationWindow, prelude::*};
 use gtk4::CenterBox;
 use gtk4_layer_shell::{Edge, Layer, LayerShell};
 
-use crate::service::event::{EventHandler, EventListener};
+use crate::service::event::{EventHandler, EventListener, UIUpdateEvent, UIUpdateEventType};
 use crate::widgets::current_window::CurrentWindow;
 use crate::widgets::panel::Panel;
 use crate::widgets::workspace::Workspace;
@@ -14,7 +14,7 @@ pub struct Taskbar {
 }
 
 impl Taskbar {
-    pub fn new(application: &Application, service: &mut impl EventListener) -> Self {
+    pub fn new(application: &Application, service: &mut impl EventListener<UIUpdateEventType, UIUpdateEvent>) -> Self {
         let window = ApplicationWindow::new(application);
 
         window.init_layer_shell();
