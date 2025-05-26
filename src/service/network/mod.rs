@@ -3,21 +3,16 @@ pub mod wireless;
 pub mod endpoints;
 pub mod devices;
 
-use std::{collections::{HashMap, HashSet}, hash::Hash, time::Duration};
+use std::collections::{HashMap, HashSet};
 
 use bimap::BiHashMap;
 use futures_util::{FutureExt, TryFutureExt};
-use num_enum::TryFromPrimitive;
-use rusty_network_manager::{
-    dbus_interface_types::{NMActiveConnectionStateReason, NMDeviceStateReason}, DeviceProxy, NetworkManagerProxy
-};
 use smol::{
     channel::{Receiver, Sender},
     stream::StreamExt,
 };
-use smol_timeout::TimeoutExt;
-use zbus::zvariant::ObjectPath;
-use zbus::{Connection, zvariant::OwnedObjectPath};
+use tracing::{info, instrument, warn};
+use zbus::Connection;
 
 use wireless::prelude::*;
 
@@ -187,6 +182,8 @@ impl NetworkService {
         smol::spawn(Self::watch_devices(self.inter_channel.0.clone())).detach();
         // Spawn a task to synchronize Wi-Fi connection profiles.
         smol::spawn(Self::sync_connections(self.inter_channel.0.clone())).detach();
+        // Spawn a task to monitor global wireless radio state.
+        smol::spawn(Self::radio_watchdog(self.inter_channel.0.clone())).detach();
         // Spawn a task to handle incoming commands.
         smol::spawn(Self::command_endpoint(
             self.inter_channel.0.clone(),
@@ -202,6 +199,7 @@ impl NetworkService {
     /// # Arguments
     /// * `event_type` - The type of the event to send.
     /// * `event` - The actual `NetworkServiceEvent` data.
+    #[instrument(skip_all)]
     async fn send_msg(&mut self, event_type: NetworkServiceEventType, event: NetworkServiceEvent) {
         let mut remove_key_if_empty = false;
         if let Some(senders_vec) = self.handlers.get_mut(&event_type) {
@@ -212,8 +210,8 @@ impl NetworkService {
                     active_senders.push(sender);
                 } else {
                     // Listener is removed because send failed (e.g., channel closed)
-                    eprintln!(
-                        "NetworkService::send_msg - A listener for {:?} was removed due to send failure.",
+                    warn!(
+                        "A listener for {:?} was removed due to send failure.",
                         event_type
                     );
                 }
@@ -240,5 +238,21 @@ impl EventListener<NetworkServiceEventType, NetworkServiceEvent> for NetworkServ
             .entry(event_type)
             .or_insert_with(Vec::new)
             .push(sender);
+    }
+
+    fn register_event_handler_many(
+        &mut self,
+        event_types: Vec<NetworkServiceEventType>,
+        sender: Sender<NetworkServiceEvent>,
+    ) {
+        smol::block_on(sender.send(NetworkServiceEvent::HandlerRegistered {
+            command_sender: self.command_channel.0.clone(),
+        })).expect("Handler registration failed.");
+        for event_type in event_types {
+            self.handlers
+                .entry(event_type)
+                .or_insert_with(Vec::new)
+                .push(sender.clone());
+        }
     }
 }

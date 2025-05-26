@@ -11,12 +11,27 @@
     .power-button {
         @include component.button;
 
-        // .icon {
-        //     padding: math.to-rem(8px) math.to-rem(8px);
-        // }
+        .popup {
+            @include component.popup;
+        }
+    }
+
+    .network-button {
+        @include component.button;
 
         .popup {
             @include component.popup;
+
+            .wireless {
+                .controller {
+                    @include component.component;
+                    
+                    .icon {
+                        min-width: 36px;
+                        min-height: 36px;
+                    }
+                }
+            }
         }
     }
 

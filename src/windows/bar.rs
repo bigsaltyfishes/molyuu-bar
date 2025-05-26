@@ -3,7 +3,7 @@ use adw::{Application, ApplicationWindow, prelude::*};
 use gtk4::CenterBox;
 use gtk4_layer_shell::{Edge, Layer, LayerShell};
 
-use crate::service::event::{EventHandler, EventListener, UIUpdateEvent, UIUpdateEventType};
+use crate::service::event::{EventHandler, EventHandlerMutExt, EventListener, UIUpdateEvent, UIUpdateEventType};
 use crate::widgets::current_window::CurrentWindow;
 use crate::widgets::panel::Panel;
 use crate::widgets::workspace::Workspace;
@@ -38,11 +38,11 @@ impl Taskbar {
         container.set_center_widget(Some(current_window.export_widget()));
         container.set_end_widget(Some(panel.export_widget()));
         smol::spawn(gtk4::glib::spawn_future_local(async move {
-            workspace.listen().await;
+            workspace.listen_mut().await;
         }))
         .detach();
         smol::spawn(gtk4::glib::spawn_future_local(async move {
-            current_window.listen().await;
+            current_window.listen_mut().await;
         }))
         .detach();
 

@@ -2,6 +2,20 @@
 <gresources>
   <gresource prefix="/io/github/bigsaltyfishes/molyuubar/icons">
     <file compressed="true" preprocess="xml-stripblanks">more_horiz_24.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">network_wifi_1_bar_24.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">network_wifi_1_bar_locked_24.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">network_wifi_2_bar_24.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">network_wifi_2_bar_locked_24.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">network_wifi_3_bar_24.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">network_wifi_3_bar_locked_24.svg</file>
     <file compressed="true" preprocess="xml-stripblanks">power_settings_24.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">settings_ethernet_24.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">signal_wifi_0_24.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">signal_wifi_4_bar_24.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">signal_wifi_4_bar_lock_24.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">signal_wifi_bad_24.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">signal_wifi_off_24.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">signal_wifi_statusbar_not_connected_24.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">wifi_lock_24.svg</file>
   </gresource>
 </gresources>

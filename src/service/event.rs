@@ -28,9 +28,24 @@ pub trait EventListener<T: Hash, EVENT>: Send + Sync {
         event_type: T,
         sender: Sender<EVENT>,
     );
+    fn register_event_handler_many(
+        &mut self,
+        event_types: Vec<T>,
+        sender: Sender<EVENT>,
+    ) {
+        unimplemented!()
+    }
 }
 
 pub trait EventHandler<T: Hash, EVENT> {
-    fn register_to_listener(&self, listener: &mut impl EventListener<T, EVENT>);
-    async fn listen(&mut self);
+    fn register_to_listener(&mut self, listener: &mut impl EventListener<T, EVENT>);
+
+}
+
+pub trait EventHandlerExt<T: Hash, EVENT>: EventHandler<T, EVENT> {
+    async fn listen(&self);
+}
+
+pub trait EventHandlerMutExt<T: Hash, EVENT>: EventHandler<T, EVENT> {
+    async fn listen_mut(&mut self);
 }

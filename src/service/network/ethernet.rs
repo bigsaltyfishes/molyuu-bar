@@ -1,5 +1,6 @@
 use rusty_network_manager::{DeviceProxy, dbus_interface_types::NMDeviceStateReason};
 use smol::{channel::Sender, stream::StreamExt};
+use tracing::{error, info, instrument};
 use zbus::zvariant::OwnedObjectPath;
 
 use crate::service::network::endpoints::event::{NetworkDeviceState, NetworkServiceEvent, NetworkServiceEventType};
@@ -12,7 +13,8 @@ pub(in super::super) trait EthernetWatchDogExt {
     ///
     /// Monitors device state changes.
     /// Sends events to the `NetworkService` to update its state accordingly.
-    async fn ethernet_watch_dog(
+    #[instrument(skip_all)]
+    async fn ethernet_watchdog(
         sender: Sender<NetworkServiceInterEvent>,
         device_path: OwnedObjectPath,
     ) {
@@ -35,8 +37,8 @@ pub(in super::super) trait EthernetWatchDogExt {
                 .await
                 .expect(format!("Failed to get state reason for {:?}", device_path).as_str())
                 .1;
-            eprintln!(
-                "NetworkService::ethernet_watch_dog - Initial device state: {:?} for interface {}, reason: {:?}",
+            info!(
+                "Initial device state: {:?} for interface {}, reason: {:?}",
                 state_enum, device_interface, reason
             );
 
@@ -68,8 +70,8 @@ pub(in super::super) trait EthernetWatchDogExt {
                             format!("Failed to get state reason for {:?}", device_path).as_str(),
                         )
                         .1;
-                    eprintln!(
-                        "NetworkService::ethernet_watch_dog - Device state changed: {:?} for interface {}, reason: {:?}",
+                    info!(
+                        "Device state changed: {:?} for interface {}, reason: {:?}",
                         state_enum, device_interface, reason
                     );
 
@@ -91,8 +93,8 @@ pub(in super::super) trait EthernetWatchDogExt {
                 }
             }
         }
-        eprintln!(
-            "NetworkService::ethernet_watch_dog - Device state changed stream closed for {:?}. Watchdog terminating.",
+        error!(
+            "Device state changed stream closed for {:?}. Watchdog terminating.",
             device_path
         );
     }

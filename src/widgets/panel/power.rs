@@ -30,6 +30,7 @@ impl Power {
         button.set_vexpand(true);
 
         let icon = Image::from_resource("/io/github/bigsaltyfishes/molyuubar/icons/power_settings_24.svg");
+        icon.add_css_class("icon");
         icon.set_valign(gtk4::Align::Center);
         icon.set_halign(gtk4::Align::Center);
         button.set_child(Some(&icon));

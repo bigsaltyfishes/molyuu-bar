@@ -6,6 +6,7 @@ use smol::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     net::unix::UnixStream,
 };
+use tracing::{error, info, instrument, warn};
 
 use super::event::{EventListener, UIUpdateEvent, UIUpdateEventType};
 
@@ -164,6 +165,7 @@ impl NiriService {
         }
     }
 
+    #[instrument(skip_all)]
     pub async fn listen(&mut self) {
         let niri_socket =
             std::env::var("NIRI_SOCKET").expect("NIRI_SOCKET not set. Is niri running?");
@@ -190,7 +192,7 @@ impl NiriService {
             .expect("Failed to read line from socket");
 
         if let Ok(_) = serde_json::from_str::<OkReply>(&buffer) {
-            println!("Niri is ready to handle events");
+            info!("Niri is ready to handle events");
         } else {
             panic!("Failed to read initial state from niri");
         }
@@ -309,7 +311,7 @@ impl NiriService {
                     }
                 }
                 _ => {
-                    println!("Unhandled event: {:?}", event);
+                    warn!("Unhandled event: {:?}", event);
                 }
             }
         }

@@ -1,12 +1,12 @@
 use std::time::Duration;
 
-use rusty_network_manager::dbus_interface_types::NMActiveConnectionStateReason;
 use smol::channel::{Receiver, Sender};
 use smol_timeout::TimeoutExt;
+use tracing::{debug, error, info, instrument};
 use zbus::zvariant::ObjectPath;
 
 use crate::service::network::{
-    endpoints::event::{WiFiConnServiceMessage, WiFiConnServiceResponse}, wireless::ap::{AccessPoint, AccessPointSecurity}, AccessPointConnectResult, NetworkService, WirelessConnExt, WirelessScanExt
+    endpoints::event::{WiFiConnServiceMessage, WiFiConnServiceResponse}, wireless::ap::{AccessPoint, AccessPointSecurity}, AccessPointConnectResult, NetworkService, WirelessConnExt, WirelessScanExt, RadioExt
 };
 
 use super::{
@@ -18,6 +18,7 @@ use super::{
 pub(in super::super) trait NetworkServiceCommandEndpointHelperExt:
     WirelessConnExt + WirelessScanExt
 {
+    #[instrument(skip_all)]
     async fn handle_connect(
         inter_sender: Sender<NetworkServiceInterEvent>,
         interface: String,
@@ -37,16 +38,16 @@ pub(in super::super) trait NetworkServiceCommandEndpointHelperExt:
         while let Some(Ok(evt)) = evt_rx.recv().timeout(Duration::from_secs(30)).await {
             match evt.into_request() {
                 Some(WiFiConnServiceRequest::WiFiConnect { ssid, key_mgmt }) => {
-                    eprintln!("[debug] Connecting to SSID: {}", ssid);
+                    info!("Connecting to SSID: {}", ssid);
                     if let Some(ap_list) =
                         Self::get_access_points(&inter_sender, &interface, ssid, key_mgmt).await
                     {
-                        eprintln!("[debug] Found access points: {:?}", ap_list);
+                        debug!("Found access points: {:?}", ap_list);
                         aps = ap_list;
                         Self::try_connect(&inter_sender, &interface, None, &aps, &client_chan)
                             .await;
                     } else {
-                        eprintln!("[debug] No access points found");
+                        error!("No access points found");
                         break;
                     }
                 }
@@ -54,7 +55,7 @@ pub(in super::super) trait NetworkServiceCommandEndpointHelperExt:
                     Self::try_connect(&inter_sender, &interface, Some(psk), &aps, &client_chan)
                         .await;
                 }
-                e => eprintln!("Unhandled event: {:?}", e),
+                e => error!("Unhandled event: {:?}", e),
             }
         }
     }
@@ -103,6 +104,7 @@ pub(in super::super) trait NetworkServiceCommandEndpointHelperExt:
         rx.recv().await.unwrap_or(None)
     }
 
+    #[instrument(skip_all)]
     async fn try_connect(
         inter_sender: &Sender<NetworkServiceInterEvent>,
         interface: &str,
@@ -140,14 +142,14 @@ pub(in super::super) trait NetworkServiceCommandEndpointHelperExt:
                     }
                 }
             }
-            eprintln!("Connection attempt failed for all APs");
+            error!("Connection attempt failed for all APs");
         }
     }
 }
 
 #[async_trait::async_trait]
 pub(in super::super) trait NetworkServiceCommandEndpointExt:
-    NetworkServiceCommandEndpointHelperExt
+    NetworkServiceCommandEndpointHelperExt + RadioExt
 where
     Self: 'static,
 {
@@ -158,12 +160,13 @@ where
     /// * `inter_sender` - Sender for internal `NetworkServiceInterEvent`s, used to communicate
     /// with other parts of the `NetworkService`.
     /// * `command_receiver` - Receiver for incoming `NetworkServiceRequest`s.
+    #[instrument(skip_all)]
     async fn command_endpoint(
         inter_sender: Sender<NetworkServiceInterEvent>,
         command_receiver: Receiver<NetworkServiceRequest>,
     ) {
         while let Ok(command) = command_receiver.recv().await {
-            eprintln!("Received command: {:?}", command);
+            debug!("Received command: {:?}", command);
             match command {
                 NetworkServiceRequest::WiFiConnect { interface, channel } => {
                     let inter = inter_sender.clone();
@@ -176,6 +179,9 @@ where
                 NetworkServiceRequest::WiFiScan { interface } => {
                     let inter = inter_sender.clone();
                     smol::spawn(Self::handle_scan(inter, interface)).detach();
+                }
+                NetworkServiceRequest::SetGlobalWirelessEnabledState { enabled } => {
+                    smol::spawn(Self::set_global_radio_state(enabled)).detach();
                 }
             }
         }

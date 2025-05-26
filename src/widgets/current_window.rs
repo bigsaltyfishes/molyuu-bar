@@ -8,8 +8,9 @@ use smol::{
     Timer,
     channel::{Receiver, Sender},
 };
+use tracing::Event;
 
-use crate::service::event::{EventHandler, EventListener, UIUpdateEvent, UIUpdateEventType};
+use crate::service::event::{EventHandler, EventHandlerMutExt, EventListener, UIUpdateEvent, UIUpdateEventType};
 
 pub struct CurrentWindow {
     app_id: Label,
@@ -60,14 +61,16 @@ impl CurrentWindow {
 }
 
 impl EventHandler<UIUpdateEventType, UIUpdateEvent> for CurrentWindow {
-    fn register_to_listener(&self, listener: &mut impl EventListener<UIUpdateEventType, UIUpdateEvent>) {
+    fn register_to_listener(&mut self, listener: &mut impl EventListener<UIUpdateEventType, UIUpdateEvent>) {
         listener.register_event_handler(
             UIUpdateEventType::WindowFocusChanged,
             self.channel.0.clone(),
         );
     }
+}
 
-    async fn listen(&mut self) {
+impl EventHandlerMutExt<UIUpdateEventType, UIUpdateEvent> for CurrentWindow {
+    async fn listen_mut(&mut self) {
         while let Ok(event) = self.channel.1.recv().await {
             match event {
                 UIUpdateEvent::WindowFocusChanged { app_id, title } => {

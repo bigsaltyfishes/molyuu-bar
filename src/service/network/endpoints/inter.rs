@@ -1,11 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
-use rusty_network_manager::DeviceProxy;
 use smol::channel::Sender;
-use zbus::zvariant::{ObjectPath, OwnedObjectPath};
+use tracing::{error, info, instrument};
+use zbus::zvariant::ObjectPath;
 
 use crate::service::network::{
-    ethernet::EthernetWatchDogExt, wireless::ap::{AccessPoint, AccessPointSecurity}, NetworkService, WirelessScanExt, WirelessWatchDogExt, DBUS_CONNECTION
+    ethernet::EthernetWatchDogExt, wireless::ap::{AccessPoint, AccessPointSecurity}, NetworkService, WirelessScanExt, WirelessWatchDogExt
 };
 
 use super::event::*;
@@ -74,6 +74,7 @@ pub(in super::super) trait NetworkServiceInterEndpointExt: WirelessWatchDogExt +
 
 #[async_trait::async_trait]
 impl NetworkServiceInterEndpointExt for NetworkService {
+    #[instrument(skip_all)]
     async fn inter_event_service(&mut self) {
         while let Ok(event) = self.inter_channel.1.recv().await {
             match event {
@@ -88,8 +89,8 @@ impl NetworkServiceInterEndpointExt for NetworkService {
                     task,
                 } => {
                     // Register a new interface and notify listeners.
-                    eprintln!(
-                        "NetworkService::listen - Registering interface: {} ({:?})",
+                    info!(
+                        "Registering interface: {} ({:?})",
                         interface, device_type
                     );
                     self.storage
@@ -108,8 +109,8 @@ impl NetworkServiceInterEndpointExt for NetworkService {
                     if let Some(interface) =
                         self.storage.unregister_interface_by_dbus_path(&dbus_path)
                     {
-                        eprintln!(
-                            "NetworkService::listen - Unregistered interface: {}",
+                        info!(
+                            "Unregistered interface: {}",
                             interface
                         );
                         self.send_msg(
@@ -149,7 +150,7 @@ impl NetworkServiceInterEndpointExt for NetworkService {
                 }
                 NetworkServiceInterEvent::RefreshAPConnections { map } => {
                     // Update the storage with the latest AP connection profiles.
-                    eprintln!("NetworkService::listen - Refreshing AP connections.");
+                    info!("Refreshing AP connections.");
                     self.storage.refresh_ap_connections(map);
                 }
                 NetworkServiceInterEvent::GetAccessPoints {
@@ -169,7 +170,7 @@ impl NetworkServiceInterEndpointExt for NetworkService {
                     };
 
                     if ret.is_err() {
-                        eprintln!("NetworkService::listen - Failed to send access point.");
+                        info!("Failed to send access point.");
                     }
                 }
                 NetworkServiceInterEvent::AssignProfileValidation {
@@ -192,7 +193,7 @@ impl NetworkServiceInterEndpointExt for NetworkService {
                         .await;
 
                     if ret.is_err() {
-                        eprintln!("NetworkService::listen - Failed to send AP connection profile.");
+                        error!("Failed to send AP connection profile.");
                     }
                 }
                 NetworkServiceInterEvent::GetInterfaceDBusPath { interface, sender } => {
@@ -202,12 +203,12 @@ impl NetworkServiceInterEndpointExt for NetworkService {
                         .await;
 
                     if ret.is_err() {
-                        eprintln!("NetworkService::listen - Failed to send DBus path.");
+                        error!("Failed to send DBus path.");
                     }
                 }
             }
         }
 
-        eprintln!("NetworkService::inter_event_service - CRITICAL ERROR: Channel closed.");
+        error!("CRITICAL ERROR: Channel closed.");
     }
 }

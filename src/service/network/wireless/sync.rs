@@ -1,4 +1,4 @@
-use futures_util::{StreamExt, stream};
+use futures_util::StreamExt;
 use rusty_network_manager::{SettingsConnectionProxy, SettingsProxy};
 use smol::channel::Sender;
 use std::collections::HashSet;

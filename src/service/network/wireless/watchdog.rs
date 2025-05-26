@@ -5,10 +5,15 @@ use rusty_network_manager::{
     DeviceProxy, WirelessProxy, dbus_interface_types::NMDeviceStateReason,
 };
 use smol::channel::Sender;
+use tracing::{info, instrument};
 use zbus::zvariant::OwnedObjectPath;
 
 use crate::service::network::{
-    endpoints::{event::{NetworkDeviceState, NetworkServiceEvent, NetworkServiceEventType}, inter::NetworkServiceInterEvent}, NetworkService, DBUS_CONNECTION
+    DBUS_CONNECTION, NetworkService,
+    endpoints::{
+        event::{NetworkDeviceState, NetworkServiceEvent, NetworkServiceEventType},
+        inter::NetworkServiceInterEvent,
+    },
 };
 
 use super::ap::{AccessPoint, AccessPointSecurity};
@@ -44,6 +49,7 @@ pub(in super::super) trait WirelessWatchDogHelperExt {
 
 #[async_trait::async_trait]
 pub(in super::super) trait WirelessWatchDogExt: WirelessWatchDogHelperExt {
+    #[instrument(skip_all)]
     async fn wifi_watchdog(sender: Sender<NetworkServiceInterEvent>, path: OwnedObjectPath) {
         let conn = &*DBUS_CONNECTION;
         let device = DeviceProxy::new_from_path(path.clone(), conn)
@@ -58,7 +64,10 @@ pub(in super::super) trait WirelessWatchDogExt: WirelessWatchDogHelperExt {
         if let (Ok(s), Ok((_, r))) = (device.state().await, device.state_reason().await) {
             if let Ok(ds) = NetworkDeviceState::try_from(s) {
                 let nr = NMDeviceStateReason::try_from(r).unwrap_or(NMDeviceStateReason::UNKNOWN);
-                eprintln!("[init] {:?}@{} ({:?})", ds, interface, nr);
+                info!(
+                    "Initial device state: {:?} for interface {}, state reason: {:?}",
+                    ds, interface, nr
+                );
                 Self::emit(&sender, &interface, ds, nr).await;
             }
         }
@@ -70,7 +79,6 @@ pub(in super::super) trait WirelessWatchDogExt: WirelessWatchDogHelperExt {
                 .await
                 .filter_map(|sig| {
                     let device = device.clone();
-                    let interface = interface.clone();
                     async move {
                         if let Some(ds) = sig
                             .get()
@@ -83,7 +91,6 @@ pub(in super::super) trait WirelessWatchDogExt: WirelessWatchDogHelperExt {
                                 .await
                                 .expect("failed to get state reason")
                                 .1;
-                            eprintln!("[state] {:?}@{} ({:?})", ds, interface, r);
                             Some(WatchdogEvent::StateChanged(
                                 ds,
                                 NMDeviceStateReason::try_from(r)
@@ -117,12 +124,37 @@ pub(in super::super) trait WirelessWatchDogExt: WirelessWatchDogHelperExt {
         while let Some(evt) = streams.next().await {
             match evt {
                 WatchdogEvent::StateChanged(ds, rs) => {
-                    eprintln!("[state] {:?}@{} ({:?})", ds, interface, rs);
+                    info!(
+                        "Device state changed: {:?} for interface {}, state reason: {:?}",
+                        ds, interface, rs
+                    );
+                    // Emit the state change event
                     Self::emit(&sender, &interface, ds, rs).await;
                 }
                 WatchdogEvent::ActiveApChanged(ap) => {
-                    // TODO: get and send active AP details
-                    eprintln!("[active_ap] {:?}@{}", ap, interface);
+                    if let Some(ap) = AccessPoint::try_from_path(ap.to_string()).await {
+                        info!(
+                            "Active access point changed for interface {}, SSID: {}, Security: {:?}",
+                            interface,
+                            ap.ssid,
+                            ap.key_management()
+                        );
+                        if sender
+                            .send(NetworkServiceInterEvent::SendMessage {
+                                event_type: NetworkServiceEventType::ActiveAccessPointChanged,
+                                event: NetworkServiceEvent::ActiveAccessPointChanged {
+                                    interface: interface.clone(),
+                                    ap,
+                                },
+                            })
+                            .await
+                            .is_err()
+                        {
+                            break;
+                        }
+                    } else {
+                        info!("Failed to parse active access point from path: {}", ap);
+                    }
                 }
                 WatchdogEvent::AccessPointsChanged(list) => {
                     // build map
@@ -135,7 +167,11 @@ pub(in super::super) trait WirelessWatchDogExt: WirelessWatchDogHelperExt {
                                 .push(ap);
                         }
                     }
-                    eprintln!("[aps] @{}", interface);
+                    info!(
+                        "Access points changed for interface {}, num: {}",
+                        interface,
+                        map.len()
+                    );
                     if sender
                         .send(NetworkServiceInterEvent::RefreshAccessPoints {
                             interface: interface.clone(),

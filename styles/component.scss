@@ -20,9 +20,9 @@
         background-color: math.gtkalpha(base16.$base02, 0.8);
     }
 
-    icon {
-        font-size: math.to-rem(16px);
-        color: inherit;
+    .icon {
+        padding-left: math.to-rem(10px);
+        padding-right: math.to-rem(10px);
     }
 
     label {

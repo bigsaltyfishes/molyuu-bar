@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, HashSet}, fmt::Debug};
+use std::{collections::HashSet, fmt::Debug};
 
 use num_enum::TryFromPrimitive;
 use rusty_network_manager::dbus_interface_types::NMDeviceStateReason;
@@ -82,6 +82,8 @@ pub enum NetworkServiceEventType {
     DeviceRemoved,
     DeviceStateChanged,
     AccessPointScanReport,
+    ActiveAccessPointChanged,
+    GlobalWirelessEnabledStateChanged,
 }
 
 pub enum WiFiConnServiceRequest {
@@ -167,6 +169,10 @@ pub enum NetworkServiceRequest {
     WiFiDisconnect {
         interface: String,
     },
+    /// Request to set the global wireless enabled state.
+    SetGlobalWirelessEnabledState {
+        enabled: bool,
+    },
 }
 
 /// Represents events that occur within the network service, 
@@ -192,6 +198,15 @@ pub enum NetworkServiceEvent {
     AccessPointScanReport {
         interface: String,
         access_points: HashSet<(String, AccessPointSecurity)>,
+    },
+    /// Reports a change in the global wireless enabled state.
+    GlobalWirelessEnabledStateChanged {
+        enabled: bool,
+    },
+    /// Indicates that the active access point has changed.
+    ActiveAccessPointChanged {
+        interface: String,
+        ap: AccessPoint,
     },
     /// Return a command sender for registering event handlers.
     HandlerRegistered {

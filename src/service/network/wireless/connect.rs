@@ -9,6 +9,7 @@ use futures_util::StreamExt;
 use rusty_network_manager::{ActiveProxy, DeviceProxy, NetworkManagerProxy, SettingsConnectionProxy, SettingsProxy};
 use rusty_network_manager::dbus_interface_types::{NMActiveConnectionState, NMActiveConnectionStateReason};
 use smol::channel::Sender;
+use tracing::{debug, instrument};
 use zbus::zvariant::{ObjectPath, OwnedObjectPath, Value};
 
 
@@ -186,6 +187,7 @@ pub(in super::super) trait WirelessConnHelperExt {
             .expect("Failed to receive profile check response")
     }
 
+    #[instrument(skip_all)]
     async fn connect_with_auth(
         nm: &NetworkManagerProxy<'_>,
         ap: &AccessPoint,
@@ -217,7 +219,7 @@ pub(in super::super) trait WirelessConnHelperExt {
                 .await
                 .expect("Failed to add connection");
 
-            eprintln!("Connection added: {:?}", conn_path);
+            debug!("Connection added: {:?}", conn_path);
             Ok(nm
                 .activate_connection(&conn_path, device, &ap.dbus_path)
                 .await

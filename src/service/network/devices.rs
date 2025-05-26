@@ -3,6 +3,7 @@ use std::pin::Pin;
 use futures_util::{FutureExt, Stream, StreamExt};
 use rusty_network_manager::{DeviceProxy, NetworkManagerProxy};
 use smol::channel::Sender;
+use tracing::{error, instrument, warn};
 use zbus::zvariant::OwnedObjectPath;
 
 use super::{
@@ -29,6 +30,7 @@ where
     /// * `interface` - The network interface name (e.g., "eth0", "wlan0").
     /// * `device_type` - The type of the network device.
     /// * `task` - A `smol::Task` that will manage the device (e.g., a watchdog).
+    #[instrument(skip_all)]
     async fn register_interface(
         sender: &Sender<NetworkServiceInterEvent>,
         dbus_path: String,
@@ -55,6 +57,7 @@ where
     /// # Arguments
     /// * `sender` - The sender channel for internal service events.
     /// * `device_path` - The D-Bus object path of the newly added device.
+    #[instrument(skip_all)]
     async fn add_device(sender: Sender<NetworkServiceInterEvent>, device_path: OwnedObjectPath) {
         // Create a D-Bus proxy for the device.
         let device_proxy = DeviceProxy::new_from_path(device_path.clone(), &DBUS_CONNECTION)
@@ -81,7 +84,7 @@ where
                     device_path.to_string(),
                     interface.clone(),
                     NetworkDeviceType::Ethernet,
-                    smol::spawn(Self::ethernet_watch_dog(sender.clone(), device_path)),
+                    smol::spawn(Self::ethernet_watchdog(sender.clone(), device_path)),
                 )
                 .await;
             }
@@ -96,8 +99,8 @@ where
                 )
                 .await;
             }
-            t => eprintln!(
-                "NetworkService::add_device - Unknown device type: {:?} for interface {}",
+            t => warn!(
+                "Unknown device type: {:?} for interface {}",
                 t, interface
             ),
         }
@@ -111,6 +114,7 @@ where
     ///
     /// # Arguments
     /// * `sender` - Sender channel for internal `NetworkServiceInterEvent`s.
+    #[instrument(skip_all)]
     async fn watch_devices(sender: Sender<NetworkServiceInterEvent>) {
         // Create a D-Bus proxy for NetworkManager.
         let nm = NetworkManagerProxy::new(&DBUS_CONNECTION)
@@ -137,7 +141,7 @@ where
                     match msg.args() {
                         Ok(sig) => Some(DeviceEvent::Added(sig.device_path.into())),
                         Err(e) => {
-                            eprintln!("parse DeviceAdded error: {:?}", e);
+                            error!("parse DeviceAdded error: {:?}", e);
                             None
                         }
                     }
@@ -150,7 +154,7 @@ where
                     match msg.args() {
                         Ok(sig) => Some(DeviceEvent::Removed(sig.device_path.into())),
                         Err(e) => {
-                            eprintln!("parse DeviceAdded error: {:?}", e);
+                            error!("parse DeviceAdded error: {:?}", e);
                             None
                         }
                     }
@@ -174,7 +178,7 @@ where
                 }
             }
         }
-        eprintln!("NetworkService::watch_devices - Device watch task ended.");
+        error!("Device watch task ended unexpectedly.");
     }
 }
 
